@@ -9,6 +9,17 @@
 extern uint8_t Temperature_sign[8];
 extern uint8_t Humidity_sign[8];
 
+enum EnvironmentState {
+    STATE_UNKNOWN = -1,
+    STATE_ERROR = 0,
+    STATE_COMFORTABLE = 1,
+    STATE_NORMAL = 2,
+    STATE_WARNING = 3,
+    STATE_CRITICAL = 4
+};
+
+
+
 void lcdInit(void);
 void lcdProcess(float temperature, float humidity);
 void taskDisplayLcd(void *pvParameters);

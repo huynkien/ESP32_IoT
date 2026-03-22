@@ -52,54 +52,82 @@ void lcdInit() {
 }
 
 void lcdProcess(float t, float h) {
-    lcd.clear();
-    // case error
-    if (h < 0)
-    {
-        lcd.setCursor(3, 0);
-        lcd.print("SENSOR ERROR");
-        Serial.print("Sensor Error!\n");
+    // Save last state to avoid unnecessary updates
+    static EnvironmentState last_state = STATE_UNKNOWN;
+    EnvironmentState current_state = STATE_UNKNOWN;
+
+    // Process data to determine state
+    if (h < 0) {
+        current_state = STATE_ERROR;
     } 
-    // case comfortable
-    else if ((t > 26 && t <= 30) && (h > 45 && h <= 65))
-    {
-        lcd.setCursor(2, 0);
-        lcd.print("COMFORTABLE~");
-        Serial.print("Comfortable~\n");
+    else if ((t > 26 && t <= 30) && (h > 45 && h <= 65)) {
+        current_state = STATE_COMFORTABLE;
     }
-    // case normal
-    else if ((t > 24 && t <= 26) || (t > 30 && t <= 33) 
-          || (h > 40 && h <= 45) || (h > 65 && h <= 70))
-    {
-        lcd.setCursor(5, 0);
-        lcd.print("NORMAL");
-        Serial.print("Normal\n");
-    }
-    // case warning
     else if ((t > 16 && t <= 24) || (t > 33 && t <= 35)
-          || (h > 20 && h <= 40) || (h > 70 && h <= 85))
-    {
-        lcd.setCursor(4, 0);
-        lcd.print("WARNING!");
-        Serial.print("Warning!\n");
+          || (h > 20 && h <= 40) || (h > 70 && h <= 85)) {
+        current_state = STATE_WARNING;
     }
-    // case critical
     else if ((t <= 16) && (t > 35) 
-          || (h <= 20) && (h > 85))
-    {
-        lcd.setCursor(3, 0);
-        lcd.print("CRITICAL!!");
-        Serial.print("Critical!!!\n");
+          || (h <= 20) && (h > 85)) {
+        current_state = STATE_CRITICAL;
+    }
+    else {
+        current_state = STATE_NORMAL;
     }
 
-    // Display temperature and humidity
+    // Update row 1 when state has changed
+    if (current_state != last_state) {
+        lcd.setCursor(0, 0);
+        lcd.print("                "); // Clear only row 1
+
+        switch (current_state) {
+            case STATE_ERROR:
+                lcd.setCursor(2, 0);
+                lcd.print("SENSOR ERROR");
+                Serial.println("State: Sensor Error!");
+                break;
+            case STATE_COMFORTABLE:
+                lcd.setCursor(2, 0);
+                lcd.print("COMFORTABLE~");
+                Serial.println("State: Comfortable~");
+                break;
+            case STATE_NORMAL:
+                lcd.setCursor(5, 0);
+                lcd.print("NORMAL");
+                Serial.println("State: Normal");
+                break;
+            case STATE_WARNING:
+                lcd.setCursor(4, 0);
+                lcd.print("WARNING!");
+                Serial.println("State: Warning!");
+                break;
+            case STATE_CRITICAL:
+                lcd.setCursor(3, 0);
+                lcd.print("CRITICAL!!");
+                Serial.println("State: Critical!!!");
+                break;
+            default:
+                break;
+        }
+        
+        last_state = current_state;
+    }
+
+    // Update row 2
+    // Overite data instead of clear
     lcd.setCursor(0, 1);
     lcd.write(0);
-    lcd.printf("%.2f", t);
-    lcd.write((uint8_t)223); // Character º
-    lcd.print("C ");
+    
+    // Process temperature string
+    char temp_str[10];
+    sprintf(temp_str, "%.2f\xDF""C ", t); // \xDF = (º)
+    lcd.print(temp_str);
+
+    lcd.setCursor(9, 1);
     lcd.write(1);
-    lcd.printf("%.2f", h);
-    lcd.print("%");
+    // Process humidity string 
+    char humi_str[10];
+    sprintf(humi_str, "%.2f%% ", h); 
+    lcd.print(humi_str);
 }
 
