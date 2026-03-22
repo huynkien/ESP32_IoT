@@ -15,10 +15,12 @@ struct sensorData {
 
 struct taskQueue {
     QueueHandle_t qLED;
+    QueueHandle_t qNEO;
 };
 
 struct taskSemaphore {
     SemaphoreHandle_t sLED;
+    SemaphoreHandle_t sNEO;
 };
 
 extern taskQueue data_queues;

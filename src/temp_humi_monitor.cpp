@@ -32,9 +32,11 @@ void tempHumiMonitor(void *pvParameters){
 
         // Send sensor datas to queues
         xQueueOverwrite(sensor_data->qLED, &local_data);
+        xQueueOverwrite(sensor_data->qNEO, &local_data);
 
-        // Semaphore to tasks
-        xSemaphoreGive(data_semaphore->sLED);        
+        // Semaphore to tasks (Báo hiệu cho cả LED và NeoPixel)
+        xSemaphoreGive(data_semaphore->sLED);
+        xSemaphoreGive(data_semaphore->sNEO);
 
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }

@@ -6,23 +6,24 @@ void taskLedBlinky(void *pvParameters) {
     taskQueue *sensor_data = &data_queues; 
     taskSemaphore *data_semaphore = &data_sems;
     sensorData received_data;
-    float current_freq = 1.0; // default
-    float delay_time = 500.0; // default 
+    
+    float current_freq = 1.0; 
+    uint32_t delay_time = 500; 
+    bool led_state = false;    
 
     while(1) {
-        if(xQueueReceive(sensor_data->qLED, &received_data.temperature, 0) == pdPASS) {
-            current_freq = tempToFreq(received_data.temperature);
-            delay_time   = static_cast<int>(1000.0 / current_freq);
-            Serial.printf("Temperature: %.2f, delay time: %.2f\n", received_data.temperature, delay_time);
+        if(xSemaphoreTake(data_semaphore->sLED, pdMS_TO_TICKS(delay_time)) == pdPASS) {
+            if(xQueueReceive(sensor_data->qLED, &received_data, 0) == pdPASS) {
+                float temp = received_data.temperature;
+                current_freq = tempToFreq(temp);
+                delay_time = static_cast<int>(1000.0 / current_freq);
+                Serial.printf("Temperature: %.2f ºC, Delay: %d ms\n", temp, delay_time);
+            }
+        } else {
+            // Toggle LED
+            led_state = !led_state;
+            digitalWrite(LED_GPIO, led_state ? HIGH : LOW);
         }
-
-        // Xóa cờ semaphore nếu có để tránh bị ứ đọng
-        xSemaphoreTake(data_semaphore->sLED, 0);
-
-        digitalWrite(LED_GPIO, HIGH);
-        vTaskDelay(delay_time / portTICK_PERIOD_MS);
-        digitalWrite(LED_GPIO, LOW);
-        vTaskDelay(delay_time / portTICK_PERIOD_MS);
     }
 }
 
@@ -40,4 +41,5 @@ float tempToFreq(float temp) {
 
     return minFreq + (temp - minTemp) * (maxFreq - minFreq) / (maxTemp - minTemp);
 }
+
 
