@@ -12,7 +12,9 @@ void taskLedBlinky(void *pvParameters) {
     bool led_state = false;    
 
     while(1) {
+        // Block task until semaphore is given by tempHumiMonitor task
         if(xSemaphoreTake(data_semaphore->sLED, pdMS_TO_TICKS(delay_time)) == pdPASS) {
+            // Receive sensor data from LED queue
             if(xQueueReceive(sensor_data->qLED, &received_data, 0) == pdPASS) {
                 float temp = received_data.temperature;
                 current_freq = tempToFreq(temp);

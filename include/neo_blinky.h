@@ -4,11 +4,10 @@
 #include "global.h"
 #include <Adafruit_NeoPixel.h>
 
-
 #define NEO_PIN 45
 #define LED_COUNT 1 
 
-void neoBlinky(void *pvParameters);
+void taskNeoBlinky(void *pvParameters);
 void setHumidityColor(Adafruit_NeoPixel &strip, float humidity);
 
 #endif

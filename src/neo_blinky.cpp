@@ -1,6 +1,6 @@
 #include "neo_blinky.h"
 
-void neoBlinky(void *pvParameters) {
+void taskNeoBlinky(void *pvParameters) {
     Adafruit_NeoPixel strip(LED_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);
     strip.begin();
     strip.clear();
@@ -12,7 +12,9 @@ void neoBlinky(void *pvParameters) {
     sensorData received_data;
 
     while (1) {
+        // Block task until semaphore is given by tempHumiMonitor task
         if (xSemaphoreTake(data_semaphore->sNEO, portMAX_DELAY) == pdPASS) {
+            // Receive sensor data from NEO queue
             if(xQueueReceive(sensor_data->qNEO, &received_data, 0) == pdPASS) {
                 Serial.printf("Humidity: %.2f\n", received_data.humidity);    
                 setHumidityColor(strip, received_data.humidity);
