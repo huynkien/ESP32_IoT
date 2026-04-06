@@ -18,10 +18,7 @@ enum EnvironmentState {
     STATE_CRITICAL = 4
 };
 
-
-
 void lcdInit(void);
 void lcdProcess(float temperature, float humidity);
-void taskDisplayLcd(void *pvParameters);
 
 #endif

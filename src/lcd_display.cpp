@@ -2,24 +2,6 @@
 
 LiquidCrystal_I2C lcd(0x21, 16, 2);
 
-void taskDisplayLcd(void *pvParameters) {
-    taskQueue *sensor_data = &data_queues; 
-    taskSemaphore *data_semaphore = &data_sems;
-    sensorData received_data;
-    
-    lcdInit();
-
-    while (1) {
-        // Block task until semaphore is given by tempHumiMonitor task
-        if (xSemaphoreTake(data_semaphore->sLCD, portMAX_DELAY) == pdPASS) {
-            // Receive sensor data from LCD queue
-            if (xQueueReceive(sensor_data->qLCD, &received_data, 0) == pdPASS) {
-                lcdProcess(received_data.temperature, received_data.humidity);
-            }
-        }
-    }
-}
-
 uint8_t Temperature_sign[8] = {
     0b00000,
     0b11100,

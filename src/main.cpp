@@ -13,7 +13,6 @@ void setup() {
     xTaskCreatePinnedToCore(tempHumiMonitor, "TempHumiMonitor", 4 * 1024, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(taskLedBlinky,         "LedBlinky", 4 * 1024, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(taskNeoBlinky,         "NeoBlinky", 4 * 1024, NULL, 1, NULL, 1);
-    xTaskCreatePinnedToCore(taskDisplayLcd,       "LcdDisplay", 4 * 1024, NULL, 1, NULL, 1);
 }
 
 void loop() {
