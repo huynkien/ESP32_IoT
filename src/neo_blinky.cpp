@@ -10,15 +10,28 @@ void taskNeoBlinky(void *pvParameters) {
     taskQueue *sensor_data = &data_queues; 
     taskSemaphore *data_semaphore = &data_sems;
     sensorData received_data;
+    neoCtrlData current_ctrl;
+    current_ctrl.mode = NEO_AUTO_MODE;
 
     while (1) {
-        // Block task until semaphore is given by tempHumiMonitor task
-        if (xSemaphoreTake(data_semaphore->sNEO, portMAX_DELAY) == pdPASS) {
-            // Receive sensor data from NEO queue
+        // Update changes of NeoPixel control mode from WebServer
+        if (xQueueReceive(sensor_data->qNEO_Ctrl, &current_ctrl, 0) == pdPASS) {
+            if (current_ctrl.mode == NEO_MANUAL_MODE) {
+                for (int i = 0; i < LED_COUNT; i++) {
+                    strip.setPixelColor(i, strip.Color(current_ctrl.r, current_ctrl.g, current_ctrl.b));
+                }
+                strip.show();
+            }
+        }
+
+        // Update NeoPixel color based on humidity in AUTO MODE
+        if (xSemaphoreTake(data_semaphore->sNEO, pdMS_TO_TICKS(100)) == pdPASS) {
             if(xQueueReceive(sensor_data->qNEO, &received_data, 0) == pdPASS) {
                 Serial.printf("Humidity: %.2f\n", received_data.humidity);    
-                setHumidityColor(strip, received_data.humidity);
-                strip.show();
+                if (current_ctrl.mode == NEO_AUTO_MODE) {
+                    setHumidityColor(strip, received_data.humidity);
+                    strip.show();
+                }
             }
         }
     }

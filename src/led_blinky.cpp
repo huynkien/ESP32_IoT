@@ -10,8 +10,20 @@ void taskLedBlinky(void *pvParameters) {
     float current_freq = 1.0; 
     uint32_t delay_time = 500; 
     bool led_state = false;    
+    LED_MODE current_mode = LED_AUTO_MODE;
 
     while(1) {
+        // Cập nhật chế độ từ WebServer
+        LED_MODE new_mode;
+        if(xQueueReceive(sensor_data->qLED_Ctrl, &new_mode, 0) == pdPASS) {
+            current_mode = new_mode;
+            if(current_mode == LED_ON_MODE) {
+                digitalWrite(LED_GPIO, HIGH);
+            } else if(current_mode == LED_OFF_MODE) {
+                digitalWrite(LED_GPIO, LOW);
+            }
+        }
+
         // Block task until semaphore is given by tempHumiMonitor task
         if(xSemaphoreTake(data_semaphore->sLED, pdMS_TO_TICKS(delay_time)) == pdPASS) {
             // Receive sensor data from LED queue
@@ -22,9 +34,11 @@ void taskLedBlinky(void *pvParameters) {
                 Serial.printf("Temperature: %.2f ºC, Delay: %d ms\n", temp, delay_time);
             }
         } else {
-            // Toggle LED
-            led_state = !led_state;
-            digitalWrite(LED_GPIO, led_state ? HIGH : LOW);
+            // Blink LED base on Temperature in AUTO MODE
+            if(current_mode == LED_AUTO_MODE) {
+                led_state = !led_state;
+                digitalWrite(LED_GPIO, led_state ? HIGH : LOW);
+            }
         }
     }
 }
@@ -43,5 +57,3 @@ float tempToFreq(float temp) {
 
     return minFreq + (temp - minTemp) * (maxFreq - minFreq) / (maxTemp - minTemp);
 }
-
-
