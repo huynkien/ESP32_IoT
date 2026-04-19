@@ -24,10 +24,13 @@ void init_global() {
     data_queues.qWEB = xQueueCreate(1, sizeof(sensorData));
     data_queues.qLED_Ctrl = xQueueCreate(1, sizeof(LED_MODE));
     data_queues.qNEO_Ctrl = xQueueCreate(1, sizeof(neoCtrlData));
+    data_queues.qIOT = xQueueCreate(1, sizeof(sensorData));
 
     // Create semaphore
     data_sems.sLED   = xSemaphoreCreateBinary();
     data_sems.sNEO   = xSemaphoreCreateBinary();
     data_sems.sWEB   = xSemaphoreCreateBinary();
+    data_sems.sIOT   = xSemaphoreCreateBinary();
+    xBinarySemaphoreInternet = xSemaphoreCreateBinary();
 }
 

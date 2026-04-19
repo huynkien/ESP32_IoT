@@ -28,12 +28,14 @@ struct taskQueue {
     QueueHandle_t qWEB;
     QueueHandle_t qLED_Ctrl;
     QueueHandle_t qNEO_Ctrl;
+    QueueHandle_t qIOT;
 };
 
 struct taskSemaphore {
     SemaphoreHandle_t sLED;
     SemaphoreHandle_t sNEO;
     SemaphoreHandle_t sWEB;
+    SemaphoreHandle_t sIOT;
 };
 
 extern taskQueue data_queues;
