@@ -72,3 +72,25 @@ void Webserver_reconnect()
     }
     ElegantOTA.loop();
 }
+
+void task_webserver_stream(void *pvParameters) {
+    sensorData web_data;
+
+    while (1) {
+        if (webserver_isrunning) {
+            if (xSemaphoreTake(data_sems.sWEB, pdMS_TO_TICKS(100)) == pdTRUE) {
+                if (xQueueReceive(data_queues.qWEB, &web_data, 0) == pdTRUE) {
+                    StaticJsonDocument<200> doc;
+                    doc["page"] = "home";
+                    doc["temperature"] = web_data.temperature;
+                    doc["humidity"] = web_data.humidity;
+
+                    String jsonData;
+                    serializeJson(doc, jsonData);
+                    Webserver_sendata(jsonData);
+                }
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
