@@ -2,12 +2,8 @@
 var gateway = `ws://${window.location.hostname}/ws`;
 var websocket;
 
-let gaugeTemp;
-let gaugeHumi;
-
 window.addEventListener('load', function() {
     initWebSocket();
-    initGauges();
 });
 
 function onOpen(event) {
@@ -41,11 +37,15 @@ function onMessage(event) {
     console.log("📩 Nhận:", event.data);
     try {
         var data = JSON.parse(event.data);
-        if (data.temperature !== undefined && gaugeTemp) {
-            gaugeTemp.refresh(data.temperature);
-        }
-        if (data.humidity !== undefined && gaugeHumi) {
-            gaugeHumi.refresh(data.humidity);
+        if (data.page === "home") {
+            if (data.temperature !== undefined) {
+                let txtT = document.getElementById("text_temp");
+                if (txtT) txtT.innerText = data.temperature.toFixed(2) + " °C";
+            }
+            if (data.humidity !== undefined) {
+                let txtH = document.getElementById("text_humi");
+                if (txtH) txtH.innerText = data.humidity.toFixed(2) + " %";
+            }
         }
     } catch (e) {
         console.warn("Không phải JSON hợp lệ:", event.data);
@@ -62,37 +62,6 @@ function showSection(id, event) {
     document.getElementById(id).style.display = id === 'settings' ? 'flex' : 'block';
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     event.currentTarget.classList.add('active');
-}
-
-
-// ==================== HOME GAUGES ====================
-
-function initGauges() {
-    gaugeTemp = new JustGage({
-        id: "gauge_temp",
-        value: 0,
-        min: -10,
-        max: 50,
-        donut: true,
-        pointer: false,
-        gaugeWidthScale: 0.25,
-        gaugeColor: "transparent",
-        levelColorsGradient: true,
-        levelColors: ["#00BCD4", "#4CAF50", "#FFC107", "#F44336"]
-    });
-
-    gaugeHumi = new JustGage({
-        id: "gauge_humi",
-        value: 0,
-        min: 0,
-        max: 100,
-        donut: true,
-        pointer: false,
-        gaugeWidthScale: 0.25,
-        gaugeColor: "transparent",
-        levelColorsGradient: true,
-        levelColors: ["#42A5F5", "#00BCD4", "#0288D1"]
-    });
 }
 
 
