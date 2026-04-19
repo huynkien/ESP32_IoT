@@ -40,9 +40,13 @@ void tempHumiMonitor(void *pvParameters){
         xQueueOverwrite(sensor_data->qLED, &local_data);
         xQueueOverwrite(sensor_data->qNEO, &local_data);
 
+        xQueueOverwrite(sensor_data->qIOT, &local_data);
+
         // Semaphore to tasks (Báo hiệu cho các task)
         xSemaphoreGive(data_semaphore->sLED);
         xSemaphoreGive(data_semaphore->sNEO);
+
+        xSemaphoreGive(data_semaphore->sIOT);
 
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }

@@ -8,6 +8,7 @@
 #include "task_webserver.h"
 #include "task_check_info.h"
 #include "task_toggle_boot.h"
+#include "task_core_iot.h"
 
 void setup() {
     Serial.begin(115200);
@@ -21,6 +22,7 @@ void setup() {
 
     // Toggle boot for reset device - Hold button for 2s to reset
     xTaskCreatePinnedToCore(taskToggleBoot,       "ToggleBoot", 4 * 1024, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(task_core_iot,     "Task_Core_IoT", 8 * 1024, NULL, 1, NULL, 1);
 }
 
 void loop() {
