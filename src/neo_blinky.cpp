@@ -29,8 +29,32 @@ void taskNeoBlinky(void *pvParameters) {
             if(xQueueReceive(sensor_data->qNEO, &received_data, 0) == pdPASS) {
                 Serial.printf("Humidity: %.2f\n", received_data.humidity);    
                 if (current_ctrl.mode == NEO_AUTO_MODE) {
-                    setHumidityColor(strip, received_data.humidity);
-                    strip.show();
+                    // Check if there's a new TinyML result to display
+                    TinyMLResult ml_result;
+                    if (xSemaphoreTake(data_semaphore->sTinyML_Out, 0) == pdPASS) {
+                        if (xQueueReceive(sensor_data->qTinyML_Result, &ml_result, 0) == pdPASS) {
+                            uint32_t color;
+                            if (ml_result.class_id == 0) {
+                                color = strip.Color(255, 0, 0);   // High Risk     → red
+                            } else if (ml_result.class_id == 1) {
+                                color = strip.Color(255, 165, 0); // Moderate Risk → orange
+                            } else {
+                                color = strip.Color(0, 200, 0);   // Optimal       → green
+                            }
+                            for (int i = 0; i < LED_COUNT; i++) {
+                                strip.setPixelColor(i, color);
+                            }
+                            strip.show();
+                        } else {
+                            // if failed to get TinyML result, fallback to humidity color
+                            setHumidityColor(strip, received_data.humidity);
+                            strip.show();
+                        }
+                    } else {
+                        // No TinyML signal yet, use humidity color
+                        setHumidityColor(strip, received_data.humidity);
+                        strip.show();
+                    }
                 }
             }
         }
