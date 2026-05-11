@@ -46,6 +46,18 @@ function onMessage(event) {
                 let txtH = document.getElementById("text_humi");
                 if (txtH) txtH.innerText = data.humidity.toFixed(2) + " %";
             }
+            if (data.spoilage_risk !== undefined) {
+                const labelVi = { "High Risk": "Nguy cơ cao", "Moderate Risk": "Nguy cơ vừa", "Optimal": "An toàn" };
+                let lbl = document.getElementById("text_tinyml_label");
+                if (lbl) lbl.innerText = labelVi[data.spoilage_risk] || data.spoilage_risk;
+                const colors = { "High Risk": "#ff4444", "Moderate Risk": "#ffaa00", "Optimal": "#44bb44" };
+                let card = document.getElementById("card_tinyml");
+                if (card) card.style.borderColor = colors[data.spoilage_risk] || "#888";
+            }
+            if (data.confidence !== undefined) {
+                let conf = document.getElementById("text_tinyml_conf");
+                if (conf) conf.innerText = data.confidence.toFixed(1) + "%";
+            }
         }
     } catch (e) {
         console.warn("Không phải JSON hợp lệ:", event.data);

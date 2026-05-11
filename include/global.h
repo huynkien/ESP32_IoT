@@ -13,7 +13,6 @@ extern String WIFI_PASS;
 extern String CORE_IOT_TOKEN;
 extern String CORE_IOT_SERVER;
 extern String CORE_IOT_PORT;
-extern String DEVICE_NAME;
 
 extern boolean isWifiConnected;
 extern SemaphoreHandle_t xBinarySemaphoreInternet;
@@ -21,13 +20,6 @@ extern SemaphoreHandle_t xBinarySemaphoreInternet;
 struct sensorData {
     float temperature;
     float humidity;
-};
-
-struct struct_message {
-    char  macAddr[32]; 
-    float temperature;
-    float humidity;
-    char  spoilage_risk[16];
 };
 
 struct taskQueue {
@@ -39,7 +31,6 @@ struct taskQueue {
     QueueHandle_t qIOT;
     QueueHandle_t qTinyML;        
     QueueHandle_t qTinyML_Result;
-    QueueHandle_t qESP_NOW;
 };
 
 struct taskSemaphore {
@@ -47,6 +38,8 @@ struct taskSemaphore {
     SemaphoreHandle_t sNEO;
     SemaphoreHandle_t sWEB;
     SemaphoreHandle_t sIOT;
+    SemaphoreHandle_t sTinyML;    
+    SemaphoreHandle_t sTinyML_Out;
 };
 
 extern taskQueue data_queues;
@@ -61,6 +54,23 @@ struct neoCtrlData {
     uint8_t r;
     uint8_t g;
     uint8_t b;
+};
+
+struct mlFeatures {
+    float temp;
+    float humidity;
+    float temp_lag_1;
+    float temp_lag_5;
+    float temp_rolling_mean_10;
+    float temp_rolling_std_30;
+    float hour;
+};
+
+//  0=High Risk, 1=Moderate Risk, 2=Optimal
+struct TinyMLResult {
+    int   class_id;
+    float confidence;
+    char  label[16];
 };
 
 void init_global();
