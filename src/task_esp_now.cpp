@@ -18,7 +18,7 @@ void on_data_receive(const uint8_t *mac_address, const uint8_t *data, int data_l
 void broadcastESPNow(float temperature, float humidity, const char* spoilage_risk) {
     struct_message send_data;
     
-    // Sử dụng DEVICE_NAME nếu đã được set, nếu không sử dụng MAC Address
+    // Use DEVICE_NAME if set, otherwise use MAC Address
     String dev_identity = DEVICE_NAME;
     if (dev_identity == NULL || dev_identity.isEmpty()) {
         dev_identity = WiFi.macAddress();

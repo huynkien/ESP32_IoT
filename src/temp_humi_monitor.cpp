@@ -1,5 +1,6 @@
 #include "temp_humi_monitor.h"
 #include "lcd_display.h"
+#include <WiFi.h>
 
 DHT20 dht20;
 
@@ -63,6 +64,16 @@ static mlFeatures computeFeatures(float temp, float humidity) {
     return f;
 }
 
+// Function to simulate cold storage environment from real room data
+static void cold_storage_simulate_scale(float raw_temp, float raw_humi, float &scaled_temp, float &scaled_humi) {
+    scaled_temp = raw_temp - 28.31f; // Scale depending on the difference between room temp and cold storage temp
+    scaled_humi = raw_humi + 2.5f;  // Scale depending on the difference between room humidity and cold storage humidity
+    
+    // Clamp values to realistic ranges for cold storage
+    if (scaled_humi > 100.0f) scaled_humi = 100.0f;
+    if (scaled_humi < 0.0f) scaled_humi = 0.0f;
+}
+
 void tempHumiMonitor(void *pvParameters){
 
     Wire.begin(11, 12);
@@ -90,18 +101,34 @@ void tempHumiMonitor(void *pvParameters){
             temperature = humidity =  -1;
         } 
 
-        local_data.temperature = temperature;
-        local_data.humidity = humidity;
+        // Clone raw data to local variables for processing and display
+        float scaled_temp = temperature;
+        float scaled_humi = humidity;
+
+        // If read is successful -> Apply scale function to simulate cold storage environment
+        if (temperature != -1 && humidity != -1) {
+            cold_storage_simulate_scale(temperature, humidity, scaled_temp, scaled_humi);
+        }
+
+        local_data.temperature = scaled_temp;
+        local_data.humidity = scaled_humi;
 
         // Send features to TinyML task
-        mlFeatures features = computeFeatures(temperature, humidity);
+        mlFeatures features = computeFeatures(scaled_temp, scaled_humi);
         xQueueOverwrite(sensor_data->qTinyML, &features);
         xSemaphoreGive(data_semaphore->sTinyML);
 
         // Display on LCD 
         TinyMLResult ml_result;
         bool has_ml = (xQueuePeek(sensor_data->qTinyML_Result, &ml_result, 0) == pdPASS);
-        lcdProcess(temperature, humidity, has_ml ? &ml_result : nullptr);
+        lcdProcess(scaled_temp, scaled_humi, has_ml ? &ml_result : nullptr);
+
+        // BROADCAST ESP-NOW IF WIFI NOT CONNECTED (GATEWAY MODE)
+        if (WiFi.status() != WL_CONNECTED) {
+            extern void broadcastESPNow(float temperature, float humidity, const char* spoilage_risk);
+            const char* risk_str = has_ml ? ml_result.label : "Unknown";
+            broadcastESPNow(scaled_temp, scaled_humi, risk_str);
+        }
 
         // Send sensor datas to queues
         xQueueOverwrite(sensor_data->qLED, &local_data);
