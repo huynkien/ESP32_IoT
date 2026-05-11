@@ -5,6 +5,7 @@ String WIFI_PASS;
 String CORE_IOT_TOKEN;
 String CORE_IOT_SERVER;
 String CORE_IOT_PORT;
+String DEVICE_NAME;
 
 String ssid = "ESP32-KK";
 String password = "12345678";
@@ -25,6 +26,7 @@ void init_global() {
     data_queues.qLED_Ctrl = xQueueCreate(1, sizeof(LED_MODE));
     data_queues.qNEO_Ctrl = xQueueCreate(1, sizeof(neoCtrlData));
     data_queues.qIOT = xQueueCreate(1, sizeof(sensorData));
+    data_queues.qESP_NOW = xQueueCreate(20, sizeof(struct_message));
 
     // Create semaphore
     data_sems.sLED   = xSemaphoreCreateBinary();

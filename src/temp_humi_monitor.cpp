@@ -1,7 +1,78 @@
 #include "temp_humi_monitor.h"
 #include "lcd_display.h"
+#include <WiFi.h>
 
 DHT20 dht20;
+
+#define TEMP_BUF_SIZE 30
+static float temp_history[TEMP_BUF_SIZE] = {0};
+static int   buf_head  = 0;
+static int   buf_count = 0;
+
+static void push_temp(float t) {
+    temp_history[buf_head] = t;
+    buf_head = (buf_head + 1) % TEMP_BUF_SIZE;
+    if (buf_count < TEMP_BUF_SIZE) buf_count++;
+}
+
+// n=0: latest sample, n=1: 1 step before, ...
+static float get_lag(int n) {
+    if (buf_count == 0) return 0.0f;
+    if (n >= buf_count) n = buf_count - 1; // fallback: earliest sample 
+    int idx = (buf_head - 1 - n + TEMP_BUF_SIZE) % TEMP_BUF_SIZE;
+    return temp_history[idx];
+}
+
+// ─── Calculate features: temp, humidity, temp_lag_1, temp_lag_5, temp_rolling_mean_10, temp_rolling_std_30, hour --- 
+static mlFeatures computeFeatures(float temp, float humidity) {
+    push_temp(temp);
+
+    mlFeatures f;
+    f.temp     = temp;
+    f.humidity = humidity;
+    f.temp_lag_1 = get_lag(1);
+    f.temp_lag_5 = get_lag(5);
+
+    // Rolling mean — max 10 samples (30s)
+    int n10 = (buf_count < 10) ? buf_count : 10;
+    float sum = 0;
+    for (int i = 0; i < n10; i++) sum += get_lag(i);
+    f.temp_rolling_mean_10 = sum / n10;
+
+    // Rolling std max 30 samples (90s)
+    float mean30 = 0;
+    for (int i = 0; i < buf_count; i++) mean30 += get_lag(i);
+    mean30 /= buf_count;
+    float var = 0;
+    for (int i = 0; i < buf_count; i++) {
+        float d = get_lag(i) - mean30;
+        var += d * d;
+    }
+    f.temp_rolling_std_30 = (buf_count > 1) ? sqrtf(var / (buf_count - 1)) : 0.0f;
+
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        f.hour = (float)timeinfo.tm_hour;
+    } else {
+        f.hour = (float)((millis() / 3600000UL) % 24);
+    }
+
+    Serial.printf("[Features] t=%.2f h=%.2f l1=%.2f l5=%.2f m10=%.2f s30=%.4f hr=%.0f\n",
+        f.temp, f.humidity, f.temp_lag_1, f.temp_lag_5,
+        f.temp_rolling_mean_10, f.temp_rolling_std_30, f.hour);
+
+    return f;
+}
+
+// Function to simulate cold storage environment from real room data
+static void cold_storage_simulate_scale(float raw_temp, float raw_humi, float &scaled_temp, float &scaled_humi) {
+    scaled_temp = raw_temp - 28.31f; // Scale depending on the difference between room temp and cold storage temp
+    scaled_humi = raw_humi + 2.5f;  // Scale depending on the difference between room humidity and cold storage humidity
+    
+    // Clamp values to realistic ranges for cold storage
+    if (scaled_humi > 100.0f) scaled_humi = 100.0f;
+    if (scaled_humi < 0.0f) scaled_humi = 0.0f;
+}
 
 void tempHumiMonitor(void *pvParameters){
 
@@ -30,11 +101,34 @@ void tempHumiMonitor(void *pvParameters){
             temperature = humidity =  -1;
         } 
 
-        local_data.temperature = temperature;
-        local_data.humidity = humidity;
+        // Clone raw data to local variables for processing and display
+        float scaled_temp = temperature;
+        float scaled_humi = humidity;
 
-        // Display on LCD
-        lcdProcess(temperature, humidity);
+        // If read is successful -> Apply scale function to simulate cold storage environment
+        if (temperature != -1 && humidity != -1) {
+            cold_storage_simulate_scale(temperature, humidity, scaled_temp, scaled_humi);
+        }
+
+        local_data.temperature = scaled_temp;
+        local_data.humidity = scaled_humi;
+
+        // Send features to TinyML task
+        mlFeatures features = computeFeatures(scaled_temp, scaled_humi);
+        xQueueOverwrite(sensor_data->qTinyML, &features);
+        xSemaphoreGive(data_semaphore->sTinyML);
+
+        // Display on LCD 
+        TinyMLResult ml_result;
+        bool has_ml = (xQueuePeek(sensor_data->qTinyML_Result, &ml_result, 0) == pdPASS);
+        lcdProcess(scaled_temp, scaled_humi, has_ml ? &ml_result : nullptr);
+
+        // BROADCAST ESP-NOW IF WIFI NOT CONNECTED (GATEWAY MODE)
+        if (WiFi.status() != WL_CONNECTED) {
+            extern void broadcastESPNow(float temperature, float humidity, const char* spoilage_risk);
+            const char* risk_str = has_ml ? ml_result.label : "Unknown";
+            broadcastESPNow(scaled_temp, scaled_humi, risk_str);
+        }
 
         // Send sensor datas to queues
         xQueueOverwrite(sensor_data->qLED, &local_data);

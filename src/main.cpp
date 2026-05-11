@@ -12,6 +12,12 @@
 
 void setup() {
     Serial.begin(115200);
+    delay(3000);
+    
+    Serial.println("\n=================================");
+    Serial.println("MAC Address: " + WiFi.macAddress());
+    Serial.println("=================================\n");
+
     // Initialize global queues and semaphores
     check_info_File(0);
     init_global();
