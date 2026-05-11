@@ -31,6 +31,7 @@ void startSTA()
     }
 
     // Không dùng while loop block ở đây để Webserver không bị lag
+    setupESPNow(); 
 }
 
 bool Wifi_reconnect()

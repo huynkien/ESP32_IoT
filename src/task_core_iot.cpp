@@ -1,5 +1,6 @@
 
 #include "task_core_iot.h"
+#include <ArduinoJson.h>
 
 constexpr uint32_t MAX_MESSAGE_SIZE = 1024U;
 
@@ -69,18 +70,17 @@ RPC_Response setLedSwitchValue(const RPC_Data &data)
 
 RPC_Response setNeoSwitchValue(const RPC_Data &data) 
 {
-    StaticJsonDocument<256> doc;
-    deserializeJson(doc, data.as<String>());
-
-    String mode = doc["mode"].as<String>();
+    String mode = data["mode"].as<String>();
     neoCtrlData neo_cmd;
 
-    if (mode == "AUTO") neo_cmd.mode = NEO_AUTO_MODE;
-    else {
+    if (mode == "AUTO") {
+        neo_cmd.mode = NEO_AUTO_MODE;
+        Serial.println("[Core IoT] Neo Mode: AUTO");
+    } else {
         neo_cmd.mode = NEO_MANUAL_MODE;
-        neo_cmd.r = doc["r"].as<uint8_t>();
-        neo_cmd.g = doc["g"].as<uint8_t>(); 
-        neo_cmd.b = doc["b"].as<uint8_t>();
+        neo_cmd.r = data["r"].as<uint8_t>();
+        neo_cmd.g = data["g"].as<uint8_t>(); 
+        neo_cmd.b = data["b"].as<uint8_t>();
         Serial.printf("[Core IoT] Neo Mode: Manual, (R, G, B): (%d, %d, %d)\n", neo_cmd.r, neo_cmd.g, neo_cmd.b);
     }
 
@@ -148,10 +148,42 @@ void CORE_IOT_reconnect()
             return;
         }
         tb.sendAttributeData("localIp", WiFi.localIP().toString().c_str());
+        
+        // Setup nhận lệnh RPC của chế độ Gateway thông báo cho Thingsboard
+        const char* connectMsg = "{\"device\": \"Gateway-Node\"}";
+        mqttClient.publish("v1/gateway/connect", (const uint8_t*)connectMsg, strlen(connectMsg));
     }
     else if (tb.connected())
     {
         tb.loop();
+    }
+}
+
+void processEspNowGateway() {
+    if (!tb.connected()) return;
+
+    struct_message rescueData;
+    
+    // Rút ra toàn bộ các gói tin cấp cứu đang mắc kẹt trong hàng đợi
+    while (xQueueReceive(data_queues.qESP_NOW, &rescueData, 0) == pdTRUE) {
+        char payload[256];
+        snprintf(payload, sizeof(payload), 
+            "{\"%s\": [{\"temperature\": %.2f, \"humidity\": %.2f, \"spoilage_risk\": \"%s\"}]}", 
+            rescueData.macAddr, 
+            rescueData.temperature, 
+            rescueData.humidity, 
+            rescueData.spoilage_risk);
+        
+        Serial.print("[GATEWAY CỨU HỘ] Đẩy bộ dữ liệu hộ mã MAC: ");
+        Serial.println(rescueData.macAddr);
+        
+        // Push payload lên Thingsboard thông qua chuẩn Gateway 
+        mqttClient.publish("v1/gateway/telemetry", (const uint8_t*)payload, strlen(payload));
+        
+        // Đẩy thêm Attribute "macAddress" cho device rớt mạng để dễ nhận diện trong Thingsboard
+        char attrPayload[128];
+        snprintf(attrPayload, sizeof(attrPayload), "{\"%s\": {\"macAddress\": \"%s\"}}", rescueData.macAddr, rescueData.macAddr);
+        mqttClient.publish("v1/gateway/attributes", (const uint8_t*)attrPayload, strlen(attrPayload));
     }
 }
 
@@ -169,6 +201,9 @@ void task_core_iot(void *pvParameters)
             // call loop to process incoming RPCs
             if (tb.connected()) {
                 tb.loop();
+                
+                // --- KÍCH HOẠT HÀM ĐẨY GÓI TIN CỦA CÁC ĐỒNG MÔN BỊ RỚT MẠNG ---
+                processEspNowGateway();
 
                 // wait semaphore from tempHumiMonitor task
                 if (xSemaphoreTake(data_sems.sIOT, pdMS_TO_TICKS(100)) == pdTRUE) {
@@ -183,8 +218,8 @@ void task_core_iot(void *pvParameters)
                         TinyMLResult ml_result;
                         if (xQueuePeek(data_queues.qTinyML_Result, &ml_result, 0) == pdPASS) {
                             tb.sendTelemetryData("spoilage_risk",  ml_result.label);
-                            tb.sendTelemetryData("confidence",     ml_result.confidence * 100.0f);
-                            tb.sendTelemetryData("class_id",       (int)ml_result.class_id);
+                            // tb.sendTelemetryData("confidence",     ml_result.confidence * 100.0f);
+                            // tb.sendTelemetryData("class_id",       (int)ml_result.class_id);
                             Serial.printf("[Core IoT] TinyML: %s (%.1f%%) class=%d\n",
                                           ml_result.label, ml_result.confidence * 100.0f, ml_result.class_id);
                         }

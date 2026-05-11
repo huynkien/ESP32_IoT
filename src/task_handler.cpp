@@ -3,7 +3,7 @@
 void handleWebSocketMessage(String message)
 {
     Serial.println(message);
-    StaticJsonDocument<256> doc;
+    DynamicJsonDocument doc(1024);
 
     DeserializationError error = deserializeJson(doc, message);
     if (error)
@@ -72,6 +72,7 @@ void handleWebSocketMessage(String message)
         String CORE_IOT_TOKEN = doc["value"]["token"].as<String>();
         String CORE_IOT_SERVER = doc["value"]["server"].as<String>();
         String CORE_IOT_PORT = doc["value"]["port"].as<String>();
+        String DEVICE_NAME = doc["value"]["device_name"].as<String>();
 
         Serial.println("Nhận cấu hình từ WebSocket:");
         Serial.println("SSID: " + WIFI_SSID);
@@ -79,9 +80,10 @@ void handleWebSocketMessage(String message)
         Serial.println("TOKEN: " + CORE_IOT_TOKEN);
         Serial.println("SERVER: " + CORE_IOT_SERVER);
         Serial.println("PORT: " + CORE_IOT_PORT);
+        Serial.println("DEVICE_NAME: " + DEVICE_NAME);
 
         // Call function to save info to file
-        Save_info_File(WIFI_SSID, WIFI_PASS, CORE_IOT_TOKEN, CORE_IOT_SERVER, CORE_IOT_PORT);
+        Save_info_File(WIFI_SSID, WIFI_PASS, CORE_IOT_TOKEN, CORE_IOT_SERVER, CORE_IOT_PORT, DEVICE_NAME);
 
         // Respond to client
         String msg = "{\"status\":\"ok\",\"page\":\"setting_saved\"}";

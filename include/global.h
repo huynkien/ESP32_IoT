@@ -13,6 +13,7 @@ extern String WIFI_PASS;
 extern String CORE_IOT_TOKEN;
 extern String CORE_IOT_SERVER;
 extern String CORE_IOT_PORT;
+extern String DEVICE_NAME;
 
 extern boolean isWifiConnected;
 extern SemaphoreHandle_t xBinarySemaphoreInternet;
@@ -20,6 +21,13 @@ extern SemaphoreHandle_t xBinarySemaphoreInternet;
 struct sensorData {
     float temperature;
     float humidity;
+};
+
+struct struct_message {
+    char  macAddr[32]; 
+    float temperature;
+    float humidity;
+    char  spoilage_risk[16];
 };
 
 struct taskQueue {
@@ -31,6 +39,7 @@ struct taskQueue {
     QueueHandle_t qIOT;
     QueueHandle_t qTinyML;        
     QueueHandle_t qTinyML_Result;
+    QueueHandle_t qESP_NOW;
 };
 
 struct taskSemaphore {

@@ -32,7 +32,7 @@ void taskNeoBlinky(void *pvParameters) {
                     // Check if there's a new TinyML result to display
                     TinyMLResult ml_result;
                     if (xSemaphoreTake(data_semaphore->sTinyML_Out, 0) == pdPASS) {
-                        if (xQueueReceive(sensor_data->qTinyML_Result, &ml_result, 0) == pdPASS) {
+                        if (xQueuePeek(sensor_data->qTinyML_Result, &ml_result, 0) == pdPASS) {
                             uint32_t color;
                             if (ml_result.class_id == 0) {
                                 color = strip.Color(255, 0, 0);   // High Risk     → red
