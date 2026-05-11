@@ -179,6 +179,15 @@ void task_core_iot(void *pvParameters)
                             CORE_IOT_sendata("telemetry", "humidity", String(iot_data.humidity));
                             Serial.printf("[Core IoT] Sent telemetry data - Temperature: %.2f, Humidity: %.2f\n", iot_data.temperature, iot_data.humidity);
                         }
+
+                        TinyMLResult ml_result;
+                        if (xQueuePeek(data_queues.qTinyML_Result, &ml_result, 0) == pdPASS) {
+                            tb.sendTelemetryData("spoilage_risk",  ml_result.label);
+                            tb.sendTelemetryData("confidence",     ml_result.confidence * 100.0f);
+                            tb.sendTelemetryData("class_id",       (int)ml_result.class_id);
+                            Serial.printf("[Core IoT] TinyML: %s (%.1f%%) class=%d\n",
+                                          ml_result.label, ml_result.confidence * 100.0f, ml_result.class_id);
+                        }
                     }
                 }
             }

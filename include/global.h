@@ -29,6 +29,8 @@ struct taskQueue {
     QueueHandle_t qLED_Ctrl;
     QueueHandle_t qNEO_Ctrl;
     QueueHandle_t qIOT;
+    QueueHandle_t qTinyML;        
+    QueueHandle_t qTinyML_Result;
 };
 
 struct taskSemaphore {
@@ -36,6 +38,8 @@ struct taskSemaphore {
     SemaphoreHandle_t sNEO;
     SemaphoreHandle_t sWEB;
     SemaphoreHandle_t sIOT;
+    SemaphoreHandle_t sTinyML;    
+    SemaphoreHandle_t sTinyML_Out;
 };
 
 extern taskQueue data_queues;
@@ -50,6 +54,23 @@ struct neoCtrlData {
     uint8_t r;
     uint8_t g;
     uint8_t b;
+};
+
+struct mlFeatures {
+    float temp;
+    float humidity;
+    float temp_lag_1;
+    float temp_lag_5;
+    float temp_rolling_mean_10;
+    float temp_rolling_std_30;
+    float hour;
+};
+
+//  0=High Risk, 1=Moderate Risk, 2=Optimal
+struct TinyMLResult {
+    int   class_id;
+    float confidence;
+    char  label[16];
 };
 
 void init_global();

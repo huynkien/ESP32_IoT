@@ -32,5 +32,11 @@ void init_global() {
     data_sems.sWEB   = xSemaphoreCreateBinary();
     data_sems.sIOT   = xSemaphoreCreateBinary();
     xBinarySemaphoreInternet = xSemaphoreCreateBinary();
+
+    // TinyML queues & semaphores
+    data_queues.qTinyML        = xQueueCreate(1, sizeof(mlFeatures));
+    data_queues.qTinyML_Result = xQueueCreate(1, sizeof(TinyMLResult));
+    data_sems.sTinyML          = xSemaphoreCreateBinary();
+    data_sems.sTinyML_Out      = xSemaphoreCreateBinary();
 }
 

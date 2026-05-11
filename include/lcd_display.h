@@ -19,6 +19,6 @@ enum EnvironmentState {
 };
 
 void lcdInit(void);
-void lcdProcess(float temperature, float humidity);
+void lcdProcess(float temperature, float humidity, const TinyMLResult *mlResult = nullptr);
 
 #endif

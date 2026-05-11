@@ -80,10 +80,17 @@ void task_webserver_stream(void *pvParameters) {
         if (webserver_isrunning) {
             if (xSemaphoreTake(data_sems.sWEB, pdMS_TO_TICKS(100)) == pdTRUE) {
                 if (xQueueReceive(data_queues.qWEB, &web_data, 0) == pdTRUE) {
-                    StaticJsonDocument<200> doc;
+                    StaticJsonDocument<256> doc;
                     doc["page"] = "home";
                     doc["temperature"] = web_data.temperature;
                     doc["humidity"] = web_data.humidity;
+
+                    TinyMLResult ml_result;
+                    if (xQueuePeek(data_queues.qTinyML_Result, &ml_result, 0) == pdPASS) {
+                        doc["spoilage_risk"] = ml_result.label;
+                        doc["confidence"]    = ml_result.confidence * 100.0f;
+                        doc["class_id"]      = ml_result.class_id;
+                    }
 
                     String jsonData;
                     serializeJson(doc, jsonData);
